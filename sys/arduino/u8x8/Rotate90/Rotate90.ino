@@ -1,10 +1,12 @@
 /*
 
-  DebounceU8x8.ino
+  Rotate90.ino
+  
+  90 degree rotation for strings
 
   Universal 8bit Graphics Library (https://github.com/olikraus/u8g2/)
 
-  Copyright (c) 2016, olikraus@gmail.com
+  Copyright (c) 2023, olikraus@gmail.com
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, 
@@ -34,13 +36,11 @@
 */
 
 #include <Arduino.h>
-#include <SPI.h>
 #include <U8x8lib.h>
 
-/*
-  Preconditions:
-  Uno with DOGS102 Shield
-*/
+#ifdef U8X8_HAVE_HW_SPI
+#include <SPI.h>
+#endif
 
 // Please UNCOMMENT one of the contructor lines below
 // U8x8 Contructor List 
@@ -295,3 +295,67 @@
 //U8X8_GU800_160X16_4W_HW_SPI u8x8(/* cs=*/ 10, /* dc=*/ 9, /* reset=*/ 8);
 
 
+// End of constructor list
+
+
+void setup(void)
+{
+  /* U8g2 Project: SSD1306 Test Board */
+  //pinMode(10, OUTPUT);
+  //pinMode(9, OUTPUT);
+  //digitalWrite(10, 0);
+  //digitalWrite(9, 0);		
+  
+  /* U8g2 Project: KS0108 Test Board */
+  //pinMode(16, OUTPUT);
+  //digitalWrite(16, 0);	
+  
+  u8x8.begin();
+  u8x8.setPowerSave(0);
+}
+static uint8_t *rotate90(uint8_t *buf)
+{
+  static uint8_t rbuf[8];
+  uint8_t i, h;
+  uint8_t *p;
+  uint8_t j;
+  for( i = 0; i < 8; i++)
+    rbuf[i] = 0;
+  for( i = 0; i < 8; i++ )
+  {
+    h = buf[i];
+    p = rbuf;
+    *p>>=1; *p |= (h&128); h <<= 1; p++;
+    *p>>=1; *p |= (h&128); h <<= 1; p++;
+    *p>>=1; *p |= (h&128); h <<= 1; p++;
+    *p>>=1; *p |= (h&128); h <<= 1; p++;
+    *p>>=1; *p |= (h&128); h <<= 1; p++;
+    *p>>=1; *p |= (h&128); h <<= 1; p++;
+    *p>>=1; *p |= (h&128); h <<= 1; p++;
+    *p>>=1; *p |= (h&128); h <<= 1; p++;
+  }
+  return rbuf;
+}
+
+void u8x8_draw_glyph_90(u8x8_t *u8x8, uint8_t x, uint8_t y, uint8_t encoding)
+{
+  static uint8_t buf[8];
+  u8x8_get_glyph_data(u8x8, encoding, buf, 0);
+  u8x8_DrawTile(u8x8, x, y, 1, rotate90(buf));
+}
+
+void u8x8_draw_string_90(u8x8_t *u8x8, uint8_t x, uint8_t y, const char *s)
+{
+  while(*s != '\0')
+    u8x8_draw_glyph_90(u8x8, x, y++, *s++); 
+}
+
+void loop(void)
+{
+  u8x8.setFont(u8x8_font_chroma48medium8_r);
+  u8x8.drawString(0,1,"Abcd");
+  u8x8_draw_string_90(u8x8.getU8x8(), 0, 2, "Abcd");
+  
+  u8x8.refreshDisplay();		// only required for SSD1606/7  
+  delay(2000);
+}
